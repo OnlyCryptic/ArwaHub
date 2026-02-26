@@ -1,82 +1,71 @@
 return function(Window)
     local Tab = Window:CreateTab("👥 اللاعبين", 4483345998)
-    local Section = Tab:CreateSection("🚀 نظام الانتقال (نسخة مستقرة)")
+    local Section = Tab:CreateSection("🚀 انتقال سريع (بدون أخطاء)")
 
-    -- دالة جلب الأسماء
-    local function getPlayerNames()
-        local list = {}
-        for _, p in pairs(game.Players:GetPlayers()) do
-            if p ~= game.Players.LocalPlayer then
-                table.insert(list, p.Name) -- نستخدم اسم المستخدم المباشر فقط لسهولة البرمجة
-            end
-        end
-        return list
-    end
-
-    -- 1. القائمة المنسدلة (Dropdown)
-    local SelectedPlayer = ""
-    local PlayerDropdown = Tab:CreateDropdown({
-        Name = "🎯 اختر اسم اللاعب",
-        Options = getPlayerNames(),
-        CurrentOption = "",
-        Flag = "TargetDrop", 
-        Callback = function(Option)
-            SelectedPlayer = Option
+    -- 1. مربع نصي لكتابة الاسم (أو جزء منه)
+    Tab:CreateInput({
+        Name = "🎯 اكتب اسم اللاعب (أو جزء منه)",
+        PlaceholderText = "مثلاً: Arwa",
+        RemoveTextAfterFocusLost = false,
+        Callback = function(Text)
+            _G.TargetName = Text
         end,
     })
 
-    -- 2. زر الانتقال (Teleport) مع حماية مضاعفة
+    -- 2. زر الانتقال اليدوي
     Tab:CreateButton({
         Name = "⚡ انتقال الآن!",
         Callback = function()
-            -- التأكد أن هناك اسم تم اختياره
-            if SelectedPlayer == "" or SelectedPlayer == nil then
-                Rayfield:Notify({Title = "⚠️ تنبيه", Content = "يرجى اختيار لاعب أولاً!", Duration = 3})
+            local targetInput = _G.TargetName
+            
+            if not targetInput or targetInput == "" then
+                Rayfield:Notify({Title = "⚠️ تنبيه", Content = "يرجى كتابة اسم في المربع أولاً!", Duration = 3})
                 return
             end
 
-            -- البحث عن اللاعب
-            local target = game.Players:FindFirstChild(SelectedPlayer)
-            
-            if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-                local localChar = game.Players.LocalPlayer.Character
-                if localChar and localChar:FindFirstChild("HumanoidRootPart") then
-                    -- عملية الانتقال
-                    localChar.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 5, 0)
-                    
-                    Rayfield:Notify({
-                        Title = "✅ نجح الانتقال",
-                        Content = "أنت الآن عند " .. target.Name,
-                        Duration = 3
-                    })
+            local success, err = pcall(function()
+                local foundPlayer = nil
+                -- البحث عن اللاعب بالاسم التقريبي
+                for _, p in pairs(game.Players:GetPlayers()) do
+                    if p ~= game.Players.LocalPlayer then
+                        if string.find(p.Name:lower(), targetInput:lower()) or string.find(p.DisplayName:lower(), targetInput:lower()) then
+                            foundPlayer = p
+                            break
+                        end
+                    end
                 end
-            else
-                Rayfield:Notify({Title = "❌ خطأ", Content = "تعذر العثور على اللاعب، جرب تحديث القائمة", Duration = 3})
+
+                if foundPlayer and foundPlayer.Character and foundPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    local localChar = game.Players.LocalPlayer.Character
+                    if localChar and localChar:FindFirstChild("HumanoidRootPart") then
+                        -- الانتقال
+                        localChar.HumanoidRootPart.CFrame = foundPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 5, 0)
+                        
+                        Rayfield:Notify({
+                            Title = "✅ تم الوصول",
+                            Content = "أنت الآن عند: " .. foundPlayer.DisplayName,
+                            Duration = 3
+                        })
+                    end
+                else
+                    Rayfield:Notify({Title = "❌ خطأ", Content = "لم يتم العثور على لاعب بهذا الاسم", Duration = 3})
+                end
+            end)
+
+            if not success then
+                warn("Error: " .. err)
             end
         end,
     })
-
-    -- 3. زر التحديث (لحل مشكلة اختفاء الأسماء)
-    Tab:CreateButton({
-        Name = "🔄 تحديث القائمة (Refresh)",
-        Callback = function()
-            PlayerDropdown:Refresh(getPlayerNames(), true)
-            Rayfield:Notify({Title = "تحديث", Content = "تم تحديث الأسماء بنجاح", Duration = 2})
-        end,
-    })
-
-    -- تحديث تلقائي بسيط
-    game.Players.PlayerAdded:Connect(function() PlayerDropdown:Refresh(getPlayerNames(), true) end)
-    game.Players.PlayerRemoving:Connect(function() PlayerDropdown:Refresh(getPlayerNames(), true) end)
 
     -- =========================================
     -- قسم كشف الأماكن (ESP)
     -- =========================================
-    local ESPSection = Tab:CreateSection("👁️ أدوات الكشف")
+    local ESPSection = Tab:CreateSection("👁️ كشف الأماكن")
     _G.ESPEnabled = false
 
     Tab:CreateToggle({
-        Name = "🟢 تشغيل كاشف اللاعبين (ESP)",
+        Name = "🟢 تشغيل ESP",
         CurrentValue = false,
         Callback = function(Value)
             _G.ESPEnabled = Value
