@@ -1,24 +1,24 @@
 -- 1. استدعاء مكتبة Kavo UI
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
 
--- 2. إنشاء النافذة الرئيسية باسم Arwa
-local Window = Library.CreateLib("Arwa", "Midnight")
+-- 2. إنشاء النافذة الرئيسية (تم إضافة Hub ورقم الإصدار V1)
+local Window = Library.CreateLib("Arwa Hub - V1", "Midnight")
 
--- 3. استدعاء ملف خانة اللاعب
+-- 3. استدعاء ملف خانة اللاعب من جيتهاب
 local loadPlayerTab = loadstring(game:HttpGet("https://raw.githubusercontent.com/OnlyCryptic/ArwaHub/main/PlayerTab.lua"))()
 
 -- 4. تشغيل خانة اللاعب
 loadPlayerTab(Window)
 
 -- =========================================
--- 5. إضافات الهاتف (إصلاح السحب وزر الإخفاء)
+-- 5. إضافات الهاتف المضمونة (إصلاح السحب وزر الإخفاء)
 -- =========================================
 local CoreGui = game:GetService("CoreGui") or game.Players.LocalPlayer:WaitForChild("PlayerGui")
 local UserInputService = game:GetService("UserInputService")
 
 -- إنشاء شاشة الزر
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ArwaToggle"
+ScreenGui.Name = "ArwaToggleV1"
 ScreenGui.Parent = CoreGui
 
 -- تصميم الزر
@@ -41,7 +41,7 @@ UIStroke.Color = Color3.fromRGB(0, 255, 255)
 UIStroke.Thickness = 2
 UIStroke.Parent = ToggleBtn
 
--- دالة السحب المخصصة للهاتف (اللمس)
+-- دالة السحب المخصصة للهاتف
 local function MakeDraggable(gui)
     local dragging, dragInput, dragStart, startPos
 
@@ -80,21 +80,31 @@ end
 -- تفعيل السحب للزر الدائري
 MakeDraggable(ToggleBtn)
 
--- البحث عن واجهة Kavo الصحيحة وتفعيل الإخفاء والسحب عليها
+-- البحث الذكي عن الواجهة لتفعيل السحب والإخفاء
 spawn(function()
-    wait(0.5) -- ننتظر نصف ثانية حتى يتم رسم الواجهة في اللعبة
+    wait(1) -- ننتظر ثانية لضمان اكتمال تحميل الواجهة
     
-    -- مكتبة Kavo تسمي الواجهة "KavoLibrary" وليس Kavo
-    local kavoGui = CoreGui:FindFirstChild("KavoLibrary")
-    if not kavoGui then
-        kavoGui = game.Players.LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("KavoLibrary")
+    local kavoGui = nil
+    
+    -- البحث في CoreGui عن واجهة تحمل اسم "Arwa Hub"
+    for _, v in pairs(CoreGui:GetChildren()) do
+        if v:IsA("ScreenGui") and v:FindFirstChild("Main") then
+            local main = v.Main
+            if main:FindFirstChild("Top") and main.Top:FindFirstChild("Title") then
+                if string.find(main.Top.Title.Text, "Arwa Hub") then
+                    kavoGui = v
+                    break
+                end
+            end
+        end
     end
     
+    -- إذا وجد الواجهة، يقوم بربطها
     if kavoGui and kavoGui:FindFirstChild("Main") then
-        -- جعل واجهة السكربت قابلة للسحب باللمس
+        -- تفعيل السحب لواجهة السكربت من أي مكان
         MakeDraggable(kavoGui.Main)
         
-        -- برمجة الزر الدائري للإخفاء والإظهار
+        -- برمجة الزر الدائري (- / +)
         ToggleBtn.MouseButton1Click:Connect(function()
             kavoGui.Enabled = not kavoGui.Enabled
             if kavoGui.Enabled then
