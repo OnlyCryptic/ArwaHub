@@ -1,22 +1,35 @@
 return function(Window)
-    -- إنشاء خانة "اللاعب"
-    local PlayerTab = Window:NewTab("اللاعب")
-    
-    -- إنشاء قسم داخل الخانة
-    local PlayerSection = PlayerTab:NewSection("إعدادات السرعة والطيران")
+    -- إنشاء خانة اللاعب
+    local Tab = Window:CreateTab("اللاعب", 4483345998) -- أيقونة اللاعب
 
-    -- إضافة شريط تعديل السرعة
-    PlayerSection:NewSlider("تعديل السرعة", "تغيير سرعة المشي", 500, 16, function(s) 
-        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = s
-    end)
+    -- قسم إعدادات الحركة
+    local Section = Tab:CreateSection("إعدادات الحركة")
 
-    -- إضافة زر الطيران (القفز اللانهائي)
-    PlayerSection:NewToggle("طيران (قفز مستمر)", "تشغيل أو إيقاف القفز", function(state)
-        _G.InfJump = state
-        game:GetService("UserInputService").JumpRequest:Connect(function()
-            if _G.InfJump then
-                game:GetService("Players").LocalPlayer.Character:FindFirstChildOfClass('Humanoid'):ChangeState("Jumping")
-            end
-        end)
-    end)
+    -- شريط السرعة (مدعوم باللمس بالكامل)
+    local SpeedSlider = Tab:CreateSlider({
+        Name = "تعديل السرعة",
+        Range = {16, 500},
+        Increment = 1,
+        Suffix = "سرعة",
+        CurrentValue = 16,
+        Flag = "SpeedSlider",
+        Callback = function(Value)
+            game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
+        end,
+    })
+
+    -- زر الطيران (القفز اللانهائي)
+    local JumpToggle = Tab:CreateToggle({
+        Name = "طيران (قفز مستمر)",
+        CurrentValue = false,
+        Flag = "JumpToggle",
+        Callback = function(Value)
+            _G.InfJump = Value
+            game:GetService("UserInputService").JumpRequest:Connect(function()
+                if _G.InfJump then
+                    game:GetService("Players").LocalPlayer.Character:FindFirstChildOfClass('Humanoid'):ChangeState("Jumping")
+                end
+            end)
+        end,
+    })
 end
