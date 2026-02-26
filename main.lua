@@ -1,27 +1,27 @@
 -- 1. استدعاء مكتبة Kavo UI
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
 
--- 2. إنشاء النافذة الرئيسية (تم إضافة Hub ورقم الإصدار V1)
-local Window = Library.CreateLib("Arwa Hub - V1", "Midnight")
+-- 2. إنشاء النافذة الرئيسية (تم التحديث إلى V2)
+local Window = Library.CreateLib("Arwa Hub - V2", "Midnight")
 
--- 3. استدعاء ملف خانة اللاعب من جيتهاب
+-- 3. استدعاء ملف خانة اللاعب
 local loadPlayerTab = loadstring(game:HttpGet("https://raw.githubusercontent.com/OnlyCryptic/ArwaHub/main/PlayerTab.lua"))()
 
 -- 4. تشغيل خانة اللاعب
 loadPlayerTab(Window)
 
 -- =========================================
--- 5. إضافات الهاتف المضمونة (إصلاح السحب وزر الإخفاء)
+-- 5. إضافات الهاتف (إصلاح نهائي للسحب والإخفاء)
 -- =========================================
 local CoreGui = game:GetService("CoreGui") or game.Players.LocalPlayer:WaitForChild("PlayerGui")
 local UserInputService = game:GetService("UserInputService")
 
 -- إنشاء شاشة الزر
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ArwaToggleV1"
+ScreenGui.Name = "ArwaToggleV2"
 ScreenGui.Parent = CoreGui
 
--- تصميم الزر
+-- تصميم الزر الدائري
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Parent = ScreenGui
 ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
@@ -41,20 +41,21 @@ UIStroke.Color = Color3.fromRGB(0, 255, 255)
 UIStroke.Thickness = 2
 UIStroke.Parent = ToggleBtn
 
--- دالة السحب المخصصة للهاتف
-local function MakeDraggable(gui)
+-- دالة سحب ذكية (تسمح بسحب عنصر عند الضغط على عنصر آخر)
+local function MakeDraggable(dragArea, moveTarget)
+    moveTarget = moveTarget or dragArea
     local dragging, dragInput, dragStart, startPos
 
     local function update(input)
         local delta = input.Position - dragStart
-        gui.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        moveTarget.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 
-    gui.InputBegan:Connect(function(input)
+    dragArea.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
-            startPos = gui.Position
+            startPos = moveTarget.Position
             
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
@@ -64,7 +65,7 @@ local function MakeDraggable(gui)
         end
     end)
 
-    gui.InputChanged:Connect(function(input)
+    dragArea.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
         end
@@ -77,37 +78,45 @@ local function MakeDraggable(gui)
     end)
 end
 
--- تفعيل السحب للزر الدائري
+-- تفعيل السحب للزر الدائري نفسه
 MakeDraggable(ToggleBtn)
 
--- البحث الذكي عن الواجهة لتفعيل السحب والإخفاء
+-- البحث عن الواجهة وتفعيل السحب من المستطيل العلوي + زر الإخفاء
 spawn(function()
-    wait(1) -- ننتظر ثانية لضمان اكتمال تحميل الواجهة
+    wait(1.5) -- ننتظر قليلاً لضمان بناء الواجهة
     
-    local kavoGui = nil
+    local MainFrame = nil
     
-    -- البحث في CoreGui عن واجهة تحمل اسم "Arwa Hub"
-    for _, v in pairs(CoreGui:GetChildren()) do
+    -- البحث في كل الواجهات عن "Arwa Hub"
+    local guis = {}
+    for _, v in pairs(CoreGui:GetChildren()) do table.insert(guis, v) end
+    if game.Players.LocalPlayer and game.Players.LocalPlayer:FindFirstChild("PlayerGui") then
+        for _, v in pairs(game.Players.LocalPlayer.PlayerGui:GetChildren()) do table.insert(guis, v) end
+    end
+
+    for _, v in pairs(guis) do
         if v:IsA("ScreenGui") and v:FindFirstChild("Main") then
             local main = v.Main
             if main:FindFirstChild("Top") and main.Top:FindFirstChild("Title") then
                 if string.find(main.Top.Title.Text, "Arwa Hub") then
-                    kavoGui = v
+                    MainFrame = main
                     break
                 end
             end
         end
     end
     
-    -- إذا وجد الواجهة، يقوم بربطها
-    if kavoGui and kavoGui:FindFirstChild("Main") then
-        -- تفعيل السحب لواجهة السكربت من أي مكان
-        MakeDraggable(kavoGui.Main)
+    -- إذا وجدنا الواجهة
+    if MainFrame then
+        -- 1. تفعيل السحب فقط عند لمس الشريط العلوي (Top)
+        if MainFrame:FindFirstChild("Top") then
+            MakeDraggable(MainFrame.Top, MainFrame)
+        end
         
-        -- برمجة الزر الدائري (- / +)
+        -- 2. برمجة زر الإخفاء والإظهار المضمون
         ToggleBtn.MouseButton1Click:Connect(function()
-            kavoGui.Enabled = not kavoGui.Enabled
-            if kavoGui.Enabled then
+            MainFrame.Visible = not MainFrame.Visible
+            if MainFrame.Visible then
                 ToggleBtn.Text = "-"
             else
                 ToggleBtn.Text = "+"
