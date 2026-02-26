@@ -1,77 +1,72 @@
 return function(Window)
     local Tab = Window:CreateTab("👥 اللاعبين", 4483345998)
-    local Section = Tab:CreateSection("🚀 انتقال سريع (بدون أخطاء)")
+    local Section = Tab:CreateSection("🚀 انتقال بالاسم (النسخة المستقرة)")
 
-    -- 1. مربع نصي لكتابة الاسم (أو جزء منه)
+    -- متغير لحفظ النص المكتوب
+    local targetInput = ""
+
+    -- 1. مربع كتابة الاسم (البحث التقريبي)
     Tab:CreateInput({
         Name = "🎯 اكتب اسم اللاعب (أو جزء منه)",
         PlaceholderText = "مثلاً: Arwa",
         RemoveTextAfterFocusLost = false,
         Callback = function(Text)
-            _G.TargetName = Text
+            targetInput = Text
         end,
     })
 
-    -- 2. زر الانتقال اليدوي
+    -- 2. زر الانتقال اليدوي مع إيموجي ⚡
     Tab:CreateButton({
-        Name = "⚡ انتقال الآن!",
+        Name = "⚡ انتقال فوري!",
         Callback = function()
-            local targetInput = _G.TargetName
-            
-            if not targetInput or targetInput == "" then
-                Rayfield:Notify({Title = "⚠️ تنبيه", Content = "يرجى كتابة اسم في المربع أولاً!", Duration = 3})
+            if targetInput == "" then
+                Rayfield:Notify({Title = "⚠️ تنبيه", Content = "اكتبي اسم اللاعب أولاً!", Duration = 3})
                 return
             end
 
-            local success, err = pcall(function()
-                local foundPlayer = nil
-                -- البحث عن اللاعب بالاسم التقريبي
-                for _, p in pairs(game.Players:GetPlayers()) do
-                    if p ~= game.Players.LocalPlayer then
-                        if string.find(p.Name:lower(), targetInput:lower()) or string.find(p.DisplayName:lower(), targetInput:lower()) then
-                            foundPlayer = p
+            local found = false
+            local searchName = targetInput:lower()
+
+            for _, player in pairs(game.Players:GetPlayers()) do
+                if player ~= game.Players.LocalPlayer then
+                    -- البحث في اسم المستخدم والاسم المستعار
+                    if string.find(player.Name:lower(), searchName) or string.find(player.DisplayName:lower(), searchName) then
+                        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                            game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame * CFrame.new(0, 5, 0)
+                            
+                            Rayfield:Notify({
+                                Title = "✅ تم الانتقال",
+                                Content = "وصلتِ عند: " .. player.DisplayName,
+                                Duration = 3
+                            })
+                            found = true
                             break
                         end
                     end
                 end
+            end
 
-                if foundPlayer and foundPlayer.Character and foundPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                    local localChar = game.Players.LocalPlayer.Character
-                    if localChar and localChar:FindFirstChild("HumanoidRootPart") then
-                        -- الانتقال
-                        localChar.HumanoidRootPart.CFrame = foundPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 5, 0)
-                        
-                        Rayfield:Notify({
-                            Title = "✅ تم الوصول",
-                            Content = "أنت الآن عند: " .. foundPlayer.DisplayName,
-                            Duration = 3
-                        })
-                    end
-                else
-                    Rayfield:Notify({Title = "❌ خطأ", Content = "لم يتم العثور على لاعب بهذا الاسم", Duration = 3})
-                end
-            end)
-
-            if not success then
-                warn("Error: " .. err)
+            if not found then
+                Rayfield:Notify({Title = "❌ خطأ", Content = "لم أجد لاعباً بهذا الاسم!", Duration = 3})
             end
         end,
     })
 
     -- =========================================
-    -- قسم كشف الأماكن (ESP)
+    -- قسم كشف الأماكن (ESP) مع إيموجي 👁️
     -- =========================================
     local ESPSection = Tab:CreateSection("👁️ كشف الأماكن")
     _G.ESPEnabled = false
 
     Tab:CreateToggle({
-        Name = "🟢 تشغيل ESP",
+        Name = "🟢 تشغيل كاشف اللاعبين (ESP)",
         CurrentValue = false,
         Callback = function(Value)
             _G.ESPEnabled = Value
         end,
     })
 
+    -- حلقة الـ ESP
     task.spawn(function()
         while task.wait(1) do
             if _G.ESPEnabled then
