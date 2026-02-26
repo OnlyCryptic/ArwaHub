@@ -1,28 +1,86 @@
 return function(Window)
-    -- إنشاء خانة اللاعب
-    local Tab = Window:CreateTab("اللاعب", 4483345998) -- أيقونة اللاعب
+    local Tab = Window:CreateTab("اللاعب", 4483345998)
+    local Section = Tab:CreateSection("إعدادات السرعة")
 
-    -- قسم إعدادات الحركة
-    local Section = Tab:CreateSection("إعدادات الحركة")
+    -- متغيرات التحكم
+    _G.SpeedEnabled = false
+    _G.WalkSpeedValue = 16
 
-    -- شريط السرعة (مدعوم باللمس بالكامل)
-    local SpeedSlider = Tab:CreateSlider({
-        Name = "تعديل السرعة",
-        Range = {16, 500},
-        Increment = 1,
-        Suffix = "سرعة",
-        CurrentValue = 16,
-        Flag = "SpeedSlider",
+    -- زر تفعيل/تعطيل تعديل السرعة
+    Tab:CreateToggle({
+        Name = "تفعيل تعديل السرعة",
+        CurrentValue = false,
         Callback = function(Value)
-            game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
+            _G.SpeedEnabled = Value
+            if not Value then
+                -- إرجاع السرعة للطبيعي عند الإغلاق
+                if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
+                    game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 16
+                end
+            end
         end,
     })
 
-    -- زر الطيران (القفز اللانهائي)
-    local JumpToggle = Tab:CreateToggle({
-        Name = "طيران (قفز مستمر)",
+    -- شريط السرعة (يدعم الكتابة المباشرة داخل المربع الصغير)
+    local SpeedSlider = Tab:CreateSlider({
+        Name = "السرعة الحالية",
+        Range = {16, 500},
+        Increment = 1,
+        CurrentValue = 16,
+        Callback = function(Value)
+            _G.WalkSpeedValue = Value
+        end,
+    })
+
+    -- أزرار الزيادة والنقصان السريعة
+    Tab:CreateButton({
+        Name = "زيادة (+10)",
+        Callback = function()
+            _G.WalkSpeedValue = math.min(_G.WalkSpeedValue + 10, 500)
+            SpeedSlider:Set(_G.WalkSpeedValue)
+        end,
+    })
+
+    Tab:CreateButton({
+        Name = "زيادة (+5)",
+        Callback = function()
+            _G.WalkSpeedValue = math.min(_G.WalkSpeedValue + 5, 500)
+            SpeedSlider:Set(_G.WalkSpeedValue)
+        end,
+    })
+
+    Tab:CreateButton({
+        Name = "نقصان (-10)",
+        Callback = function()
+            _G.WalkSpeedValue = math.max(_G.WalkSpeedValue - 10, 16)
+            SpeedSlider:Set(_G.WalkSpeedValue)
+        end,
+    })
+
+    Tab:CreateButton({
+        Name = "نقصان (-5)",
+        Callback = function()
+            _G.WalkSpeedValue = math.max(_G.WalkSpeedValue - 5, 16)
+            SpeedSlider:Set(_G.WalkSpeedValue)
+        end,
+    })
+
+    -- حلقة تكرار لضمان ثبات السرعة إذا كانت مفعلة
+    task.spawn(function()
+        while task.wait() do
+            if _G.SpeedEnabled then
+                pcall(function()
+                    game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = _G.WalkSpeedValue
+                end)
+            end
+        end
+    end)
+
+    -- قسم القفز
+    Tab:CreateSection("إعدادات القفز")
+    Tab:CreateToggle({
+        Name = "قفز لا نهائي",
         CurrentValue = false,
-        Flag = "JumpToggle",
         Callback = function(Value)
             _G.InfJump = Value
             game:GetService("UserInputService").JumpRequest:Connect(function()
