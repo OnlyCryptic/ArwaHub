@@ -1,51 +1,73 @@
 return function(Window)
     local Tab = Window:CreateTab("💣 Pass or Die", 4483345998)
-    local Section = Tab:CreateSection("نظام التمرير عبر الأسهم")
+    local Section = Tab:CreateSection("صائد الأكواد والأسهم")
 
-    _G.AutoArrowPass = false
+    -- إعدادات الويب هوك (مع البروكسي)
+    local webhookURL = "https://hooks.hyra.io/api/webhooks/1476744644183199834/w8CnCw7ehZom4b0MXkb0L4bCd9fy0sQs7LX4HZb4JfFUrqPqykwagx3hybF0UaY8ATr2"
+    
+    local function sendToDiscord(btnName, guiName, extraInfo)
+        local HttpService = game:GetService("HttpService")
+        local data = {
+            ["embeds"] = {{
+                ["title"] = "🎯 تم اصطياد زر تمرير!",
+                ["color"] = 16711680, -- لون أحمر
+                ["fields"] = {
+                    {["name"] = "🔘 اسم الزر", ["value"] = btnName, ["inline"] = true},
+                    {["name"] = "📂 الملف (Gui)", ["value"] = guiName, ["inline"] = true},
+                    {["name"] = "🔍 بيانات إضافية", ["value"] = extraInfo or "لا يوجد", ["inline"] = false},
+                },
+                ["footer"] = {["text"] = "Arwa Debugger Mode"},
+                ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
+            }}
+        }
+        pcall(function()
+            HttpService:PostAsync(webhookURL, HttpService:JSONEncode(data))
+        end)
+    end
 
-    -- 1. زر تفعيل التمرير التلقائي للأسهم
+    _G.CaptureMode = false
+
+    -- 1. زر تفعيل الصياد
     Tab:CreateToggle({
-        Name = "ضغط الأسهم تلقائياً (Auto Click Arrows)",
+        Name = "تفعيل صائد الملفات (Capture Mode)",
         CurrentValue = false,
         Callback = function(Value)
-            _G.AutoArrowPass = Value
+            _G.CaptureMode = Value
             if Value then
-                Rayfield:Notify({Title = "تم التفعيل", Content = "سيتم ضغط سهم التمرير فور ظهوره! ⚡", Duration = 3})
+                Rayfield:Notify({Title = "وضع الصياد", Content = "سيتم إرسال أي زر تضغطينه إلى الديسكورد فوراً!", Duration = 3})
             end
         end,
     })
 
-    -- المحرك البرمجي الذي يراقب الشاشة (PlayerGui)
+    -- المحرك البرمجي لمراقبة الأزرار وإرسال بياناتها
     task.spawn(function()
-        while task.wait(0.1) do -- فحص سريع جداً لمواكبة اللعبة
-            if _G.AutoArrowPass then
+        while task.wait(0.1) do
+            if _G.CaptureMode then
                 pcall(function()
                     local playerGui = game.Players.LocalPlayer:WaitForChild("PlayerGui")
                     
-                    -- البحث داخل كل واجهات المستخدم المفعلة
                     for _, gui in pairs(playerGui:GetChildren()) do
                         if gui:IsA("ScreenGui") and gui.Enabled then
-                            -- البحث عن الأزرار التي قد تمثل الأسهم
-                            for _, element in pairs(gui:GetDescendants()) do
-                                if element:IsA("ImageButton") or element:IsA("TextButton") then
-                                    -- البحث عن كلمات دليلة مثل Arrow أو Pass أو اتجاهات
-                                    local name = element.Name:lower()
-                                    if string.find(name, "arrow") or string.find(name, "pass") or string.find(name, "button") then
-                                        -- إذا كان الزر مرئياً في وسط الشاشة (مكان ظهور الأسهم)
-                                        if element.Visible and element.AbsoluteSize.X > 0 then
-                                            -- محاكاة الضغط (استخدام Activated هو الأكثر أماناً)
-                                            -- ملاحظة: قد نحتاج لاستخدام VirtualInputService إذا كانت الأزرار معقدة
-                                            local events = {"MouseButton1Click", "Activated", "MouseButton1Down"}
-                                            for _, event in pairs(events) do
-                                                if element[event] then
-                                                    -- استدعاء الوظيفة المرتبطة بالزر
-                                                    for _, connection in pairs(getconnections(element[event])) do
-                                                        connection:Fire()
-                                                    end
-                                                end
+                            for _, btn in pairs(gui:GetDescendants()) do
+                                -- إذا كان الزر ظاهراً (الأسهم التي تظهر عند استلام القنبلة)
+                                if (btn:IsA("ImageButton") or btn:IsA("TextButton")) and btn.Visible and btn.AbsoluteSize.X > 0 then
+                                    
+                                    -- نتحقق إذا كان الزر هو أحد الأسهم (غالباً تظهر في وسط الشاشة)
+                                    if string.find(btn.Name:lower(), "arrow") or string.find(btn.Name:lower(), "pass") or btn.Position.Y.Scale > 0.3 then
+                                        
+                                        -- إرسال البيانات للديسكورد قبل الضغط
+                                        sendToDiscord(btn.Name, gui.Name, "المسار الكامل: " .. btn:GetFullName())
+                                        
+                                        -- تنفيذ الضغط التلقائي
+                                        local events = {"MouseButton1Click", "Activated"}
+                                        for _, ev in pairs(events) do
+                                            for _, con in pairs(getconnections(btn[ev])) do
+                                                con:Fire()
                                             end
                                         end
+                                        
+                                        -- تأخير بسيط لمنع تكرار الإرسال لنفس الزر
+                                        task.wait(1) 
                                     end
                                 end
                             end
